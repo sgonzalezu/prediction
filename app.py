@@ -4,7 +4,7 @@ import os
 import gdown
 
 # URL del modelo en Google Drive (reemplaza con tu enlace)
-url = "https://drive.google.com/file/d/11TZMYmLSTh42bGkBRRYvnmLQJxlRdmQV/view?usp=share_link"
+url = "https://drive.google.com/uc?id=11TZMYmLSTh42bGkBRRYvnmLQJxlRdmQV"
 
 # Descargar el modelo si no existe
 if not os.path.exists("modelo.pkl"):
