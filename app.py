@@ -10,25 +10,25 @@ if not os.path.exists("modelo.pkl"):
     gdown.download(url, "modelo.pkl", quiet=False)
 
 import os
-from fastapi import FastAPI, HTTPException
 import joblib
 import pandas as pd
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
-# Cargar el modelo previamente entrenado
+# Cargar el modelo entrenado
 model_path = "modelo.pkl"
 if not os.path.exists(model_path):
     raise RuntimeError("El archivo modelo.pkl no se encuentra en el servidor.")
     
 model = joblib.load(model_path)
 
-# Definir las categorías esperadas para codificación
-categorical_mappings = {
-    "HomePlanet": {"Earth": 0, "Europa": 1, "Mars": 2},
-    "CryoSleep": {False: 0, True: 1},
-    "VIP": {False: 0, True: 1}
-}
+# Cargar la estructura original de las columnas del modelo
+column_structure_path = "column_structure.pkl"
+if not os.path.exists(column_structure_path):
+    raise RuntimeError("El archivo column_structure.pkl no se encuentra en el servidor.")
+    
+original_columns = joblib.load(column_structure_path)  # Lista de columnas con las que el modelo fue entrenado
 
 @app.get("/")
 def home():
@@ -50,20 +50,20 @@ def predict(data: dict):
         # Convertir el diccionario en un DataFrame
         df = pd.DataFrame([data])
         
-        # Convertir variables categóricas a sus valores numéricos
-        for col, mapping in categorical_mappings.items():
-            if col in df:
-                df[col] = df[col].map(mapping)
+        # Aplicar One-Hot Encoding a las variables categóricas
+        df = pd.get_dummies(df)
+        
+        # Asegurar que las columnas coincidan con las del modelo
+        for col in original_columns:
+            if col not in df.columns:
+                df[col] = 0  # Agregar columnas faltantes con valor 0
                 
-        # Revisar si hay valores NaN después de la conversión
-        if df.isnull().values.any():
-            raise HTTPException(status_code=400, detail="Error en la conversión de datos. Revisa los valores enviados.")
-            
+        df = df[original_columns]  # Ordenar columnas en el mismo orden que en el entrenamiento
+        
         # Realizar la predicción
         prediction = model.predict(df)
         return {"prediction": bool(prediction[0])}  # Convertir a booleano si es binaria
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
         
